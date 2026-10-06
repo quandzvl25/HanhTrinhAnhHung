@@ -357,7 +357,7 @@
 <script>
 (() => {
   "use strict";
-  const canvas=document.getElementById("game"), ctx=canvas.getContext("2d");
+  const canvas=document.getElementById("game"), ctx=canvas.getContext("2d",{alpha:false});
   const $=id=>document.getElementById(id), TAU=Math.PI*2, rand=(a,b)=>Math.random()*(b-a)+a, clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   let W=360,H=640,scale=1,last=0,raf=0,toastTimer=0;let WW=2600,WH=2600,camX=0,camY=0;
   const MAX_STAGES=1000;

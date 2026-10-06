@@ -32,21 +32,21 @@ jobs:
           css = "<style>*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}input,textarea{-webkit-user-select:text;user-select:text}</style>"
           assert "</head>" in s
           s = s.replace("</head>", css + "</head>", 1)
-          # 2) giải mã nhạc sẵn lúc ở menu, để lần chạm đầu không bị đứng hình
+          # 2) xuất 2 bản nhạc nhúng base64 ra file mp3 thật: HTML nhẹ đi ~6MB, không còn giải mã trên luồng chính
+          import base64
           old = ('const b64=document.getElementById("mp3-"+k).textContent.trim(),bin=atob(b64),u8=new Uint8Array(bin.length);\n'
                  '    for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);\n'
                  '    const a=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"})));')
-          new = 'const a=new Audio(trackUrl(k));'
-          helper = ('const _tu={};\n'
-                    '  function trackUrl(k){if(_tu[k])return _tu[k];const b64=document.getElementById("mp3-"+k).textContent.trim(),bin=atob(b64),u8=new Uint8Array(bin.length);'
-                    'for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return _tu[k]=URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))}\n'
-                    '  setTimeout(()=>{try{trackUrl("theme")}catch(_){}},2500);setTimeout(()=>{try{trackUrl("boss")}catch(_){}},4500);\n'
-                    '  function makeAudio(k){')
-          if old in s and "  function makeAudio(k){" in s:
-              s = s.replace("  function makeAudio(k){", "  " + helper, 1).replace(old, new, 1)
-              print("Da va phan nhac")
+          new = 'const a=new Audio("mp3-"+k+".mp3");'
+          if old in s:
+              def grab(m):
+                  open("www/mp3-" + m.group(1) + ".mp3", "wb").write(base64.b64decode(m.group(2).strip()))
+                  return '<script type="text/plain" id="mp3-' + m.group(1) + '"></script>'
+              s, n = re.subn(r'<script type="text/plain" id="mp3-(\w+)">([^<]*)</script>', grab, s)
+              s = s.replace(old, new, 1)
+              print("Da xuat", n, "file nhac")
           else:
-              print("CANH BAO: khong tim thay doan giai ma nhac, bo qua")
+              print("CANH BAO: khong tim thay doan giai ma nhac, giu nguyen")
           open(p, "w", encoding="utf8").write(s)
           PY
           npm init -y >/dev/null
@@ -97,6 +97,13 @@ jobs:
           }
           JAVA
           npx cap sync android
+      - name: Dùng khóa ký cố định (để cài đè được bản cũ)
+        run: |
+          test -f debug.keystore || { echo "Thiếu debug.keystore trong repo"; exit 1; }
+          mkdir -p ~/.android && cp debug.keystore ~/.android/debug.keystore
+          grep -q "versionCode 1" android/app/build.gradle || { echo "Không thấy versionCode 1"; exit 1; }
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          grep -n "versionCode" android/app/build.gradle
       - name: Build APK
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
@@ -122,21 +129,21 @@ jobs:
           css = "<style>*{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}input,textarea{-webkit-user-select:text;user-select:text}</style>"
           assert "</head>" in s
           s = s.replace("</head>", css + "</head>", 1)
-          # 2) giải mã nhạc sẵn lúc ở menu, để lần chạm đầu không bị đứng hình
+          # 2) xuất 2 bản nhạc nhúng base64 ra file mp3 thật: HTML nhẹ đi ~6MB, không còn giải mã trên luồng chính
+          import base64
           old = ('const b64=document.getElementById("mp3-"+k).textContent.trim(),bin=atob(b64),u8=new Uint8Array(bin.length);\n'
                  '    for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);\n'
                  '    const a=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"})));')
-          new = 'const a=new Audio(trackUrl(k));'
-          helper = ('const _tu={};\n'
-                    '  function trackUrl(k){if(_tu[k])return _tu[k];const b64=document.getElementById("mp3-"+k).textContent.trim(),bin=atob(b64),u8=new Uint8Array(bin.length);'
-                    'for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);return _tu[k]=URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))}\n'
-                    '  setTimeout(()=>{try{trackUrl("theme")}catch(_){}},2500);setTimeout(()=>{try{trackUrl("boss")}catch(_){}},4500);\n'
-                    '  function makeAudio(k){')
-          if old in s and "  function makeAudio(k){" in s:
-              s = s.replace("  function makeAudio(k){", "  " + helper, 1).replace(old, new, 1)
-              print("Da va phan nhac")
+          new = 'const a=new Audio("mp3-"+k+".mp3");'
+          if old in s:
+              def grab(m):
+                  open("www/mp3-" + m.group(1) + ".mp3", "wb").write(base64.b64decode(m.group(2).strip()))
+                  return '<script type="text/plain" id="mp3-' + m.group(1) + '"></script>'
+              s, n = re.subn(r'<script type="text/plain" id="mp3-(\w+)">([^<]*)</script>', grab, s)
+              s = s.replace(old, new, 1)
+              print("Da xuat", n, "file nhac")
           else:
-              print("CANH BAO: khong tim thay doan giai ma nhac, bo qua")
+              print("CANH BAO: khong tim thay doan giai ma nhac, giu nguyen")
           open(p, "w", encoding="utf8").write(s)
           PY
           npm init -y >/dev/null
