@@ -700,7 +700,7 @@
   function effDamage(){return player.damage*(player.buffDmgMult||1)*(player.curse>0?.8:1)}
   function effRate(){return player.rate/(player.buffRateMult||1)}
   function effSpeed(){return (player.speed+(player.buffMoveExtra||0))*(player.slow>0?.65:1)}
-  function resize(){W=innerWidth;H=innerHeight;canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);scale=Math.min(W/360,H/640)}
+  function resize(){const ap=document.getElementById("app");W=ap.clientWidth||innerWidth;H=ap.clientHeight||innerHeight;canvas.width=W*devicePixelRatio;canvas.height=H*devicePixelRatio;canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);scale=Math.min(W/360,H/640)}
   addEventListener("resize",()=>{resize();if(typeof resetJoystickHome==="function"&&running)resetJoystickHome()}); resize();
   function showToast(t){$("toast").textContent=t;$("toast").classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>$("toast").classList.remove("show"),1700)}
   function setGameUI(on){$("admin-btn").classList.toggle("hidden",!(on&&isAdmin));$("bag-btn").classList.toggle("hidden",!on);$("achv-btn").classList.toggle("hidden",!on);$("hud").classList.toggle("hidden",!on);$("bottom-ui").classList.toggle("hidden",!on);$("joy-zone").classList.toggle("hidden",!on);$("upgrade-strip").classList.toggle("hidden",!on);if(!on)$("npc-prompt").classList.remove("show");if(on)requestAnimationFrame(()=>resetJoystickHome&&resetJoystickHome())}
@@ -1746,7 +1746,7 @@
     for(const p of props){if(p.y>player.y)break;if(vis(p.x,p.y,90))drawProp(p,1)}
     drawLights();
     if(portal)drawPortal(portal);for(const n of npcs)drawNpc(n);if(chest)drawChest(chest);
-    for(const z of zones)drawZone(z);for(const h of hazards)drawHazard(h);for(const d of drops)drawDrop(d);for(const ld of lootDrops)drawLootDrop(ld);for(const h of hearts)drawHeart(h);for(const s of shots)drawShot(s);for(const s of enemyShots)drawShot(s);for(const e of enemies)drawEnemy(e);drawSummons();drawPet();drawPlayer();
+    for(const z of zones)drawZone(z);for(const h of hazards)drawHazard(h);for(const d of drops)drawDrop(d);for(const ld of lootDrops)drawLootDrop(ld);for(const h of hearts)drawHeart(h);for(const s of shots)if(vis(s.x,s.y,140))drawShot(s);for(const s of enemyShots)if(vis(s.x,s.y,140))drawShot(s);for(const e of enemies)if(vis(e.x,e.y,e.isBoss?260:140))drawEnemy(e);drawSummons();drawPet();drawPlayer();
     for(const p of props){if(p.y<=player.y)continue;if(!vis(p.x,p.y,90))continue;const near=Math.abs(p.x-player.x)<48&&p.y-player.y<46&&(p.kind==="tree"||p.kind==="mush"||p.kind==="pillar"||p.kind==="deadtree");drawProp(p,near?.5:1)}
     for(const f of floaters){ctx.save();ctx.globalAlpha=clamp(f.life/f.max*1.6,0,1);ctx.font='900 '+(f.big?18:13)+'px system-ui';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='#000b';ctx.strokeText(f.t,f.x,f.y);ctx.fillStyle=f.c;ctx.fillText(f.t,f.x,f.y);ctx.restore()}
     for(const fx of meleeFx)drawMeleeFx(fx);
@@ -2726,24 +2726,26 @@
   /* ================= TOÀN MÀN HÌNH (chống vuốt văng app) ================= */
   const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
   const isStandalone=window.matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+  const isNative=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform())||location.protocol==="capacitor:";
   const fsEl=document.documentElement;
   function hasFS(){return !!(fsEl.requestFullscreen||fsEl.webkitRequestFullscreen)}
   function inFS(){return !!(document.fullscreenElement||document.webkitFullscreenElement)}
   function updateFsBtn(){
     const b=$("fullscreen-btn");if(!b)return;
-    const on=inFS()||isStandalone;
+    const on=inFS()||isStandalone||isNative;
     b.classList.toggle("active",on);
     b.textContent="🖥️ Toàn Màn Hình: "+(on?"BẬT":"TẮT");
   }
   async function toggleFullscreen(){
+    if(isNative){showToast("Ứng dụng đã luôn ở chế độ toàn màn hình");return}
     if(isIOS&&!hasFS()){
       if(isStandalone){showToast("Đã ở chế độ toàn màn hình (mở từ Màn Hình Chính)!");return}
       showToast("iPhone: chạm nút Chia Sẻ ⬆️ trên Safari → 'Thêm vào MH chính' để chơi toàn màn hình, không còn vuốt văng app!");
       return;
     }
     try{
-      if(!inFS()){await (fsEl.requestFullscreen?fsEl.requestFullscreen():fsEl.webkitRequestFullscreen());showToast("Đã bật Toàn Màn Hình!")}
-      else{await (document.exitFullscreen?document.exitFullscreen():document.webkitExitFullscreen());showToast("Đã tắt Toàn Màn Hình")}
+      if(!inFS()){await (fsEl.requestFullscreen?fsEl.requestFullscreen():fsEl.webkitRequestFullscreen());try{await screen.orientation.lock("portrait")}catch(_){}showToast("Đã bật Toàn Màn Hình!")}
+      else{await (document.exitFullscreen?document.exitFullscreen():document.webkitExitFullscreen());try{screen.orientation.unlock()}catch(_){}showToast("Đã tắt Toàn Màn Hình")}
     }catch(err){showToast("Thiết bị không hỗ trợ Toàn Màn Hình — hãy thử 'Thêm vào Màn Hình Chính'")}
   }
   $("fullscreen-btn").addEventListener("click",toggleFullscreen);
@@ -3101,8 +3103,13 @@
   try{const sq=localStorage.getItem("htahQ");if(sq!==null)Q=Math.max(0,Math.min(2,+sq));else if(matchMedia("(pointer:coarse)").matches)Q=1}catch(_){}
   const DPR_CAP=[1,1.5,2],PART_CAP=[60,140,260];
   /* 1) giới hạn độ phân giải canvas: điện thoại DPR 3 thì vẽ gấp 9 lần điểm ảnh */
-  resize=function(){const d=Math.min(window.devicePixelRatio||1,DPR_CAP[Q]);W=innerWidth;H=innerHeight;canvas.width=Math.round(W*d);canvas.height=Math.round(H*d);canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(d,0,0,d,0,0);scale=Math.min(W/360,H/640)};
+  resize=function(){const d=Math.min(window.devicePixelRatio||1,DPR_CAP[Q]);const ap=$("app");W=ap.clientWidth||innerWidth;H=ap.clientHeight||innerHeight;canvas.width=Math.round(W*d);canvas.height=Math.round(H*d);canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(d,0,0,d,0,0);scale=Math.min(W/360,H/640)};
   resize();
+  {let rq=0;const rs=()=>{rq=0;resize();if(typeof resetJoystickHome==="function"&&running)resetJoystickHome()};
+   const kick=()=>{if(!rq)rq=requestAnimationFrame(rs)};
+   try{new ResizeObserver(kick).observe($("app"))}catch(_){addEventListener("resize",kick)}
+   addEventListener("orientationchange",()=>setTimeout(kick,150));
+   document.addEventListener("fullscreenchange",()=>setTimeout(kick,100));document.addEventListener("webkitfullscreenchange",()=>setTimeout(kick,100))}
   /* 2) shadowBlur (hiệu ứng phát sáng) rất nặng trên di động: chỉ bật ở mức đồ họa cao nhất */
   try{const sd=Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype,"shadowBlur");
     Object.defineProperty(ctx,"shadowBlur",{get(){return sd.get.call(ctx)},set(v){sd.set.call(ctx,Q>=2?v:0)},configurable:true})}catch(_){}
@@ -3122,7 +3129,7 @@
       const n=performance.now(),dt=n-lt;lt=n;
       if(running&&!paused&&dt<250&&dt>0){acc+=dt;cnt++;
         if(cnt>=45){const avg=acc/cnt;acc=0;cnt=0;
-          if(avg>24&&Q>0){if(++bad>=2){bad=0;Q--;try{localStorage.setItem("htahQ",Q)}catch(_){}resize();showToast("Đã tự giảm đồ họa để game mượt hơn")}}else bad=0}
+          const budget=FPS_LIMIT>0?1000/FPS_LIMIT:16.7;if(avg>Math.max(24,budget*1.45)&&Q>0&&!document.hidden){if(++bad>=2){bad=0;Q--;resize();updateGfxUI();showToast("Đã tự giảm đồ họa để game mượt hơn")}}else bad=0}
       }else if(!running||paused){acc=0;cnt=0}
       return o.apply(this,arguments)}}
 
@@ -3164,7 +3171,7 @@
     const st = document.getElementById("gfx-status");
     if (st) {
       const dpr = Math.min(window.devicePixelRatio||1, [1,1.5,2][Q]);
-      st.textContent = "DPR: ×" + dpr.toFixed(1) + " · Hạt tối đa: " + [60,140,260][Q] + " · Glow: " + (Q>=2?"Bật":"Tắt");
+      st.textContent = "DPR: ×" + dpr.toFixed(1) + " · Hạt tối đa: " + [60,140,260][Q] + " · Glow: " + (Q>=2?"Bật":"Tắt") + " · chạm vào đây: bảng đo FPS";
     }
   }
 
@@ -3218,6 +3225,27 @@
 
   // Khởi tạo UI
   updateGfxUI();
+
+  /* ===== BẢNG ĐO HIỆU NĂNG: chạm vào dòng trạng thái trong bảng Đồ họa để bật/tắt ===== */
+  {
+    let on=false;try{on=localStorage.getItem("htahPerf")==="1"}catch(_){}
+    const box=document.createElement("div");
+    box.style.cssText="position:fixed;left:6px;top:calc(60px + env(safe-area-inset-top));z-index:50;pointer-events:none;font:10px/1.35 monospace;color:#9dffb0;background:#000a;padding:4px 6px;border-radius:6px;white-space:pre;display:none";
+    document.body.appendChild(box);
+    let fr=0,su=0,sd=0,worst=0,t0=performance.now(),tl=0;
+    const ou=update,od=draw;
+    update=function(dt){const a=performance.now();ou(dt);su+=performance.now()-a};
+    draw=function(){
+      const a=performance.now();od();const n=performance.now();sd+=n-a;fr++;
+      if(tl&&n-tl>worst)worst=n-tl;tl=n;
+      if(n-t0>=500){
+        if(on){const sec=(n-t0)/1000;box.textContent="FPS "+(fr/sec).toFixed(0)+"   khung dài nhất "+worst.toFixed(0)+"ms\nupdate "+(su/fr).toFixed(1)+"ms   draw(JS) "+(sd/fr).toFixed(1)+"ms\nquái "+enemies.length+"  đạn "+(shots.length+enemyShots.length)+"  hạt "+particles.length+"\nQ"+Q+"  DPR x"+(canvas.width/W).toFixed(2)+"  "+W+"x"+H}
+        fr=0;su=0;sd=0;worst=0;t0=n}
+    };
+    const apply=()=>{box.style.display=on?"block":"none"};apply();
+    const st=document.getElementById("gfx-status");
+    if(st)st.addEventListener("click",()=>{on=!on;try{localStorage.setItem("htahPerf",on?"1":"0")}catch(_){}apply();showToast("Bảng đo hiệu năng: "+(on?"BẬT":"TẮT"))});
+  }
 
   requestAnimationFrame(loop);
 })();
