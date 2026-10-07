@@ -79,6 +79,18 @@ jobs:
             }
 
             @Override
+            public void onPause() {
+              try { getBridge().getWebView().evaluateJavascript("window.dispatchEvent(new Event('htah-bg'))", null); } catch (Exception e) {}
+              super.onPause();
+            }
+
+            @Override
+            public void onResume() {
+              super.onResume();
+              try { getBridge().getWebView().evaluateJavascript("window.dispatchEvent(new Event('htah-fg'))", null); } catch (Exception e) {}
+            }
+
+            @Override
             public void onWindowFocusChanged(boolean hasFocus) {
               super.onWindowFocusChanged(hasFocus);
               if (hasFocus) hideSystemBars();
